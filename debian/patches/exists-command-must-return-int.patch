@@ -1,0 +1,247 @@
+From f68bd4f8d2b87c6445b9166447c1752c6236d63b Mon Sep 17 00:00:00 2001
+From: artygus <hero@engineeriam.net>
+Date: Fri, 12 Jun 2020 12:50:23 +0300
+Subject: [PATCH] exists command must return int
+Description: patch upstream + test modifications
+Origin: https://github.com/guilleiguaran/fakeredis/commit/f68bd4f8d2b87c6445b9166447c1752c6236d63b
+Bug-Debian: https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=1002985
+
+
+--- a/lib/redis/connection/memory.rb
++++ b/lib/redis/connection/memory.rb
+@@ -168,7 +168,7 @@
+       end
+ 
+       def dump(key)
+-        return nil unless exists(key)
++        return nil if exists(key).zero?
+ 
+         value = data[key]
+ 
+@@ -179,7 +179,7 @@
+       end
+ 
+       def restore(key, ttl, serialized_value)
+-        raise Redis::CommandError, "ERR Target key name is busy." if exists(key)
++        raise Redis::CommandError, "ERR Target key name is busy." if exists(key) > 0
+ 
+         raise Redis::CommandError, "ERR DUMP payload version or checksum are wrong" if serialized_value.nil?
+ 
+@@ -359,7 +359,7 @@
+       end
+ 
+       def exists(key)
+-        data.key?(key)
++        data.key?(key) ? 1 : 0
+       end
+ 
+       def llen(key)
+@@ -702,7 +702,7 @@
+       end
+ 
+       def setnx(key, value)
+-        if exists(key)
++        if exists(key) > 0
+           0
+         else
+           set(key, value)
+@@ -718,7 +718,7 @@
+       end
+ 
+       def renamenx(key, new_key)
+-        if exists(new_key)
++        if exists(new_key) > 0
+           false
+         else
+           rename(key, new_key)
+@@ -742,7 +742,7 @@
+         if data.expires.include?(key) && (ttl = data.expires[key].to_i - Time.now.to_i) > 0
+           ttl
+         else
+-          exists(key) ? -1 : -2
++          exists(key) > 0 ? -1 : -2
+         end
+       end
+ 
+@@ -750,7 +750,7 @@
+         if data.expires.include?(key) && (ttl = data.expires[key].to_f - Time.now.to_f) > 0
+           ttl * 1000
+         else
+-          exists(key) ? -1 : -2
++          exists(key) > 0 ? -1 : -2
+         end
+       end
+ 
+@@ -876,8 +876,8 @@
+ 
+         return nil if option_nx && option_xx
+ 
+-        return nil if option_nx && exists(key)
+-        return nil if option_xx && !exists(key)
++        return nil if option_nx && exists(key) > 0
++        return nil if option_xx && exists(key).zero?
+ 
+         data[key] = value.to_s
+ 
+--- a/spec/hashes_spec.rb
++++ b/spec/hashes_spec.rb
+@@ -32,7 +32,7 @@
+       expect(@client.hdel("key1", "k1")).to be(1)
+       expect(@client.hdel("key1", "k2")).to be(1)
+ 
+-      expect(@client.exists("key1")).to eq(false)
++      expect(@client.exists("key1")).to eq(0)
+     end
+ 
+     it "should convert key to a string for hset" do
+@@ -135,13 +135,13 @@
+ 
+     it "should reject an empty list of values" do
+       expect { @client.hmset("key") }.to raise_error(Redis::CommandError)
+-      expect(@client.exists("key")).to be false
++      expect(@client.exists("key")).to be 0
+     end
+ 
+     it "rejects an insert with a key but no value" do
+       expect { @client.hmset("key", 'foo') }.to raise_error(Redis::CommandError)
+       expect { @client.hmset("key", 'foo', 3, 'bar') }.to raise_error(Redis::CommandError)
+-      expect(@client.exists("key")).to be false
++      expect(@client.exists("key")).to be 0
+     end
+ 
+     it "should reject the wrong number of arguments" do
+@@ -167,8 +167,8 @@
+     end
+ 
+     it "should set the string value of a hash field" do
+-      expect(@client.hset("key1", "k1", "val1")).to eq(true)
+-      expect(@client.hset("key1", "k1", "val1")).to eq(false)
++      expect(@client.hset("key1", "k1", "val1")).to eq(1)
++      expect(@client.hset("key1", "k1", "val1")).to eq(0)
+ 
+       expect(@client.hget("key1", "k1")).to eq("val1")
+     end
+--- a/spec/transactions_spec.rb
++++ b/spec/transactions_spec.rb
+@@ -85,7 +85,7 @@
+       it "returns true if the nested hash command succeeds" do
+         responses = @client.multi { |multi| multi.hset('hash', 'key', 'value') }
+ 
+-        expect(responses[0]).to eq(true)
++        expect(responses[0]).to eq(1)
+       end
+     end
+ 
+--- a/spec/keys_spec.rb
++++ b/spec/keys_spec.rb
+@@ -66,8 +66,8 @@
+     it "should determine if a key exists" do
+       @client.set("key1", "1")
+ 
+-      expect(@client.exists("key1")).to eq(true)
+-      expect(@client.exists("key2")).to eq(false)
++      expect(@client.exists("key1")).to eq(1)
++      expect(@client.exists("key2")).to eq(0)
+     end
+ 
+     it "should set a key's time to live in seconds" do
+@@ -134,7 +134,7 @@
+       @client.set("key1", "1")
+       @client.expireat("key1", Time.now.to_i)
+ 
+-      expect(@client.exists("key1")).to be false
++      expect(@client.exists("key1")).to be 0
+     end
+ 
+     it "should get integer and string keys" do
+@@ -409,7 +409,7 @@
+ 
+     describe "#dump" do
+       it "returns nil for unknown key" do
+-        expect(@client.exists("key1")).to be false
++        expect(@client.exists("key1")).to be 0
+         expect(@client.dump("key1")).to be nil
+       end
+ 
+@@ -445,7 +445,7 @@
+           @dumped_value = @client.dump("key1")
+ 
+           @client.del("key1")
+-          expect(@client.exists("key1")).to be false
++          expect(@client.exists("key1")).to be 0
+         end
+ 
+         it "restores to a new key successfully" do
+--- a/spec/sets_spec.rb
++++ b/spec/sets_spec.rb
+@@ -188,7 +188,7 @@
+       @client.srem("key1", "b")
+       @client.srem("key1", "a")
+ 
+-      expect(@client.exists("key1")).to eq(false)
++      expect(@client.exists("key1")).to eq(0)
+     end
+ 
+     it "should add multiple sets" do
+--- a/spec/lists_spec.rb
++++ b/spec/lists_spec.rb
+@@ -119,7 +119,7 @@
+     end
+ 
+     it "should return 0 if key does not map to a list" do
+-      expect(@client.exists("nonexistant")).to eq(false)
++      expect(@client.exists("nonexistant")).to eq(0)
+       expect(@client.lrem("nonexistant", 0, "value")).to eq(0)
+     end
+ 
+@@ -129,7 +129,7 @@
+       @client.lrem("key1", 1, "v1")
+       @client.lrem("key1", 1, "v2")
+ 
+-      expect(@client.exists("key1")).to eq(false)
++      expect(@client.exists("key1")).to eq(0)
+     end
+ 
+     it "should set the value of an element in a list by its index" do
+--- a/spec/server_spec.rb
++++ b/spec/server_spec.rb
+@@ -45,13 +45,13 @@
+ 
+         @client.select(0)
+         expect(@client.dbsize).to eq(2)
+-        expect(@client.exists("key1")).to be true
+-        expect(@client.exists("key3")).to be false
++        expect(@client.exists("key1")).to be 1
++        expect(@client.exists("key3")).to be 0
+ 
+         @client.select(1)
+         expect(@client.dbsize).to eq(3)
+-        expect(@client.exists("key4")).to be true
+-        expect(@client.exists("key2")).to be false
++        expect(@client.exists("key4")).to be 1
++        expect(@client.exists("key2")).to be 0
+ 
+         @client.flushall
+         expect(@client.dbsize).to eq(0)
+--- a/spec/sorted_sets_spec.rb
++++ b/spec/sorted_sets_spec.rb
+@@ -100,7 +100,7 @@
+     it "should remove sorted set's key when it is empty" do
+       @client.zadd("key", 1, "val")
+       @client.zrem("key", "val")
+-      expect(@client.exists("key")).to eq(false)
++      expect(@client.exists("key")).to eq(0)
+     end
+ 
+     it "should pop members with the highest scores from sorted set" do
+--- a/spec/support/shared_examples/bitwise_operation.rb
++++ b/spec/support/shared_examples/bitwise_operation.rb
+@@ -5,7 +5,7 @@
+ 
+   it "should not create destination key if nothing found" do
+     expect(@client.bitop(operator, "dest1", "nothing_here1")).to eq(0)
+-    expect(@client.exists("dest1")).to eq(false)
++    expect(@client.exists("dest1")).to eq(0)
+   end
+ 
+   it "should accept operator as a case-insensitive symbol" do
