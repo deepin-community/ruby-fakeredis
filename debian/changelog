@@ -1,5 +1,88 @@
-template-repository (1.0-1) unstable; urgency=medium
+ruby-fakeredis (0.8.0-7) unstable; urgency=medium
 
-  * Initial release
+  * Team upload.
+  * Require ruby-redis >= 4.5 for runtime and tests
 
- -- Tsic404 <liuheng@deepin.org>  Sat, 28 Jan 2023 13:46:49 +0800
+ -- Cédric Boutillier <boutil@debian.org>  Tue, 05 Apr 2022 00:01:54 +0200
+
+ruby-fakeredis (0.8.0-6) unstable; urgency=medium
+
+  * Team upload
+  * Add patch to make testsuite pass with ruby-redis 4.5.1 (Closes: #1002985)
+    + Patch: exists command must return an int
+    + Patch: skip failing test checking that 'del' command with parameter
+      should return an error
+  * Drop unused patch b594709a3209aa671db2c6ebd8bac4a256a46ee2.patch
+    (duplicate of Fix_tests_for_Ruby_2.7+_compatibility.patch)
+  * Bump Standards-Version to 4.6.0 (no changes needed)
+  * Update years in copyright file
+
+ -- Cédric Boutillier <boutil@debian.org>  Sun, 27 Mar 2022 23:38:08 +0200
+
+ruby-fakeredis (0.8.0-5) unstable; urgency=medium
+
+  * Team upload.
+  * Add Fix_tests_for_Ruby_2.7+_compatibility.patch (Closes: #996225).
+
+ -- Thomas Goirand <zigo@debian.org>  Mon, 15 Nov 2021 12:10:57 +0100
+
+ruby-fakeredis (0.8.0-4) unstable; urgency=medium
+
+  * Team upload
+  * Update team name
+  * Add .gitattributes to keep unwanted files out of the source package
+  * Add patch to fix tests with newer ruby-redis
+  * Add upstream patch to force exists command to return int
+  * Bump debhelper compatibility level to 13
+  * Explicitly mention that d/rules does not require root
+  * Remove explicit dependency on ruby/ruby-interpreter
+  * Trim trailing whitespace.
+  * Use secure copyright file specification URI.
+  * Set upstream metadata fields: Bug-Database, Bug-Submit, Repository,
+    Repository-Browse.
+
+ -- Cédric Boutillier <boutil@debian.org>  Fri, 02 Oct 2020 15:56:12 +0200
+
+ruby-fakeredis (0.8.0-3) unstable; urgency=medium
+
+  * Team upload.
+  * Reupload to unstable
+
+ -- Pirate Praveen <praveen@debian.org>  Sat, 04 Apr 2020 14:35:36 +0530
+
+ruby-fakeredis (0.8.0-2) experimental; urgency=medium
+
+  * Team upload.
+  * New upstream version 0.8.0 (Closes: #945209)
+  * Update minimum version of ruby-redis to 4
+  * Bump Standards-Version to 4.5.0 (no changes needed)
+
+ -- Pirate Praveen <praveen@debian.org>  Wed, 04 Mar 2020 15:15:58 +0530
+
+ruby-fakeredis (0.7.0-1) unstable; urgency=medium
+
+  * Team upload
+
+  [ Cédric Boutillier ]
+  * Use https:// in Vcs-* fields
+  * Use https:// in Vcs-* fields
+  * Bump Standards-Version to 3.9.7 (no changes needed)
+  * Run wrap-and-sort on packaging files
+
+  [ Utkarsh Gupta ]
+  * Add salsa-ci.yml
+
+  [ Pirate Praveen ]
+  * New upstream version 0.7.0
+  * Bump Standards-Version to 4.4.1 (no changes needed)
+  * Drop compat file, rely on debhelper-compat and bump compat level to 12
+  * Use salsa.debian.org in Vcs-* fields
+  * Move debian/watch to gemwatch.debian.net
+
+ -- Pirate Praveen <praveen@debian.org>  Thu, 21 Nov 2019 13:47:08 +0530
+
+ruby-fakeredis (0.5.0-1) unstable; urgency=low
+
+  * Initial release (Closes: #804001)
+
+ -- Abhijith PA <abhijith@openmailbox.org>  Wed, 04 Nov 2015 11:36:23 +0530

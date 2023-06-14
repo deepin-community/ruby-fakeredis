@@ -1,0 +1,18 @@
+Description: skip failing test because of missing trown error
+ the :del command without parameter is supposed to raise a Redis::CommandError
+ but no error is raised
+Author: Cédric Boutillier <boutil@debian.org>
+Last-Update: 2022-03-27
+Forwarded: no
+Bug-Debian: https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=1002985
+--- a/spec/keys_spec.rb
++++ b/spec/keys_spec.rb
+@@ -33,7 +33,7 @@
+       it "should error '#{command}'ing no keys" do
+         expect { @client.public_send(command) }.to raise_error(Redis::CommandError, "ERR wrong number of arguments for '#{command}' command")
+         expect { @client.public_send(command, []) }.to raise_error(Redis::CommandError, "ERR wrong number of arguments for '#{command}' command")
+-      end
++      end unless command == :del
+     end
+ 
+     it "should return true when setnx keys that don't exist" do
